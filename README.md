@@ -95,6 +95,7 @@ timeit t.full_name
 
 This solution is as good as we’re going to get for anything that’s wrapped with a “property” decorator. These are the same benchmarks that Pytohn’s namedtuple attributes acheive. It doesn’t The first thing we can do is start to use exceptions. Python is a “Better to ask forgiveness than permission,” language. This contrasts with lower level languges which follow a “Look before you leap,” approach. Here’s our first improvement. Baby steps, baby steps… 
 
+```python
 def cache_property_use_exceptions(fget):
     private_template = '_%%s__%s' % fget.__name__
     from functools import wraps
@@ -119,17 +120,21 @@ m.full_name
 Out[116]: 'Steve Zelaznik'
 timeit m.full_name
 1000000 loops, best of 3: 678 ns per loop
+```
 
 The big bottleneck is when we’re setting attributes by their private name. For those of you who don’t already know, Python stores “private” attributes in an obscure way. They’re not really private, they’ve just garbled up the naming convention. Not that different from trying to watch HBO as a kid without a subscription. You would still make out what’s going on if you’re willing to put in the effort. So “full_name” is officially a private attribute. That means the dictionary that stores the instance attributes for a person looks like this: 
 
+```python
 m2 = MediumPerson('Steve','Zelaznik')
 m2.full_name
 Out[121]: 'Steve Zelaznik'
 m2.__dict__
 Out[122]: {'_MediumPerson__full_name': 'Steve Zelaznik'}
+```
 
 Getting rid of this will shave a lot of time off. Let’s take a look. Just to show that my computer didn’t suddenly speed up as I have been writing this post, I went back and benchmarked an earlier class instance: 
 
+```python
 def cache_property_semipublic_names(fget):
     attr_name = '_%s' % fget.__name__
     from functools import wraps
@@ -159,9 +164,11 @@ timeit i.full_name
 # Let's run the old class instance just to be sure...
 timeit m.full_name
 1000000 loops, best of 3: 695 ns per loop
+```
 
 We’re almost there, but we can STILL shave off more than half the runtime we’re currently occupying. We’ve got two more steps to go. First, let’s get rid of the attribute getting. It’s far more efficient simply to store the caches inside a closure. This is also more memory efficient. We need one dictionary per field memoized, as opposed one dictionary per item. Hash tables waste space, so a field based storage system makes more sense in this case. In addition, it allows us to add attributes to classes where __slots__ = (). The namedtuple in particular comes to mind. 
 
+```python
 def caches_stored_per_field_not_instance(func):
     from functools import wraps
     cache = {}
@@ -191,9 +198,11 @@ timeit j.full_name
 1000000 loops, best of 3: 266 ns per loop
 1000000 loops, best of 3: 262 ns per loop
 1000000 loops, best of 3: 266 ns per loop
+```
 
 One step left before we’re done. This is probably the most “Python magic” of any of the steps so far. Function calls in Python are expensive. So whenever we are writing programming, it’s nice to be able to delegate those calls to builtin methods, which are written in C. What we’re doing here is making a special subclass of a dictionary. When the item is missing, that’s when we go ahead and make the original function call. Again, Python is “ask forgiveness and not permission.” Then we instiantiate this dictionary sublcass. This subclass is a singleton. The clever thing that we do is we return the __getitem__ method of the singleton. A property getter object only expects one argument “self”, and the __getitem__ method only expects one key, so this works out perfectly. 
 
+```python
 def lightning_speed_cache(func):
     class Cache(dict):
         __slots__ = ()
@@ -219,3 +228,4 @@ timeit t.full_name
 10000000 loops, best of 3: 152 ns per loop
 10000000 loops, best of 3: 150 ns per loop
 10000000 loops, best of 3: 150 ns per loop
+```
