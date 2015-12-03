@@ -87,25 +87,7 @@ def arg_formatter(func):
     bottom_args = ", ".join(spec.args + top_varargs + top_keywords)
     return {'top_args': top_args, 'middle_args': middle_args, 'bottom_args': bottom_args}
 
-def medium_caching(func):
-    from functools import wraps
-    cache = {}
-    name = func.__name__
-    template = '_%%s__%s' % name #Template for private name
-    @property
-    @wraps(func)
-    def decorated(self):
-        private_name = template % self.__class__.__name__
-        try:
-            return getattr(self, private_name)
-        except AttributeError:
-            pass
-        val = func(self)
-        setattr(self, private_name, val)
-        return val
-    return decorated
-
-def lightning_speed_cache(func):
+def private_cache(func):
     class Cache(dict):
         __slots__ = ()
         def __missing__(self, key):
@@ -114,20 +96,4 @@ def lightning_speed_cache(func):
             return val
     fget = Cache().__getitem__
     return property(fget, doc=func.__doc__)
-
-class Sprinter(Person):
-    __slots__ = ()
-    @lightning_speed_cache
-    def full_name(self):
-        return ' '.join([self.first_name, self.last_name])
-t = Sprinter('Steve','Zelaznik')
-
-t.full_name
-Out[131]: 'Steve Zelaznik'
-
-timeit t.full_name
-10000000 loops, best of 3: 150 ns per loop
-10000000 loops, best of 3: 152 ns per loop
-10000000 loops, best of 3: 150 ns per loop
-10000000 loops, best of 3: 150 ns per loop
 
