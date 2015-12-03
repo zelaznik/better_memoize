@@ -14,10 +14,8 @@ class Person:
             return val
 ```
 
-```python
-```
-
 I know. Pretty annoyting. It would be nice to be able to repeat the pattern like this: 
+
 ```python
 class Person:
     @cached_property
@@ -26,6 +24,7 @@ class Person:
 ```
 
 I looked up some memoizing patterns, and this patten seems to be the standard way to do things. 
+
 ```python
 def cache_property_standard(fget):
     private_template = '_%%s__%s' % fget.__name__
@@ -39,9 +38,9 @@ def cache_property_standard(fget):
     return property(fget_memoized)
 ```
 
-
 This seems to be the most common pattern, but it’s really slow. This is where I’m offering my alternative implementation. 
 
+```python
 class Person(namedtuple('BasePerson', ('first_name','last_name'))):
     def __repr__(self):
         c = self.__class__.__name__
@@ -63,9 +62,10 @@ In [95]: timeit s.full_name
 1000000 loops, best of 3: 790 ns per loop
 1000000 loops, best of 3: 781 ns per loop
 1000000 loops, best of 3: 789 ns per loop
+```
 
 We can do a lot better than that. This is the solution I’ve proposed for the same problem. Notice the order of magnitude difference in speed. It’s also more efficient with memory as well. It requires one new dictionary for each field that is memoized, as opposed to a new dictionary for each object that’s instantiated. 
-
+```python
 def lightning_speed_cache(func):
     class Cache(dict):
         __slots__ = ()
@@ -91,6 +91,7 @@ timeit t.full_name
 10000000 loops, best of 3: 152 ns per loop
 10000000 loops, best of 3: 150 ns per loop
 10000000 loops, best of 3: 150 ns per loop
+```
 
 This solution is as good as we’re going to get for anything that’s wrapped with a “property” decorator. These are the same benchmarks that Pytohn’s namedtuple attributes acheive. It doesn’t The first thing we can do is start to use exceptions. Python is a “Better to ask forgiveness than permission,” language. This contrasts with lower level languges which follow a “Look before you leap,” approach. Here’s our first improvement. Baby steps, baby steps… 
 
