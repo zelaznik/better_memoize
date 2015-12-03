@@ -2,7 +2,7 @@
 
 I’ll admit it. I hate meta programming. Don’t get me wrong, I like to use it, but only after somebody else has slaved away create all that darkroom magic that makes my life so seamless. Even so, every once in a while I too get caught deep in the metaprogramming rabbit hole. Usually after I’ve grown sick of typing the same boiler plate patterns over and over again. Most of the time there’s nothing to brag about. Every once in a while I feel like I’ve at least struck silver. So here goes. I’m presenting what may be the fastest way to memoize property decorators in Python. Necessity is the mother of invention, and I stumbled across this problem after writing and rewriting this same god-damn pattern.
 
-```ruby
+```python
 class Person:
     @property
     def full_name(self):
@@ -14,16 +14,19 @@ class Person:
             return val
 ```
 
+```python
+```
 
 I know. Pretty annoyting. It would be nice to be able to repeat the pattern like this: 
-
+```python
 class Person:
     @cached_property
     def full_name(self):
         return '%s_%s' % (self.first_name, self.last_name)
+```
 
 I looked up some memoizing patterns, and this patten seems to be the standard way to do things. 
-
+```python
 def cache_property_standard(fget):
     private_template = '_%%s__%s' % fget.__name__
     from functools import wraps
@@ -34,6 +37,8 @@ def cache_property_standard(fget):
             setattr(self, attr_name, fget(self))
         return getattr(self, attr_name)
     return property(fget_memoized)
+```
+
 
 This seems to be the most common pattern, but it’s really slow. This is where I’m offering my alternative implementation. 
 
