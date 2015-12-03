@@ -1,3 +1,5 @@
+import unittest
+
 ########################################################
 #  Template for creating multiple unit tests per item  #
 ########################################################
@@ -35,21 +37,22 @@ class bulk_test(object):
             test.__module__ = me.__module__
             test.__doc__ = template.__doc__
             dct[test.__name__] = test
-        return dct
 
     @classmethod
     def extract_templates(me, dct, items):
-        for name, value in dct.items():
+        names = tuple(dct)
+        for name in names:
+            value = dct[name]
             if getattr(value, '__bulktemplate__', False):
                 me.apply_template(value, dct, items)
-                del dct[name]
-        return dct
+        for name in names:
+            del dct[name]
 
     def __new__(me, cls):
         name = cls.__name__
         bases = cls.__bases__
         dct = dict(cls.__dict__)
-        dct = me.extract_templates(dct, dct['items'])
+        me.extract_templates(dct, dct['items'])
         if unittest.TestCase not in cls.__mro__:
             bases = (unittest.TestCase,) + bases
         return type(name, bases, dct)

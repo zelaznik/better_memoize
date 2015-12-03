@@ -1,6 +1,6 @@
 import unittest
-from better_memoize import memoize, private_cache
-from bulk_tests import *
+from better_memoize import memoize, private_cache, slower_cache
+from bulk_tests import bulk_test
 
 from collections import namedtuple, OrderedDict
 from operator import itemgetter
@@ -9,57 +9,46 @@ from operator import itemgetter
 #     Testing for the 'cached_property' features       #
 ########################################################
 
-class Incrementer:
-    def __init__(self):
-        self.value = 0
+from collections import defaultdict
+class Enumerator(object):
+    def __init__(self, name):
+        self.name = name
+        self.values = defaultdict(int)
 
-    def __iter__(self):
-        return self
+    def __call__(self, obj):
+        self.values[id(obj)] += 1
+        return self.values[id(obj)]
 
-    def next(self):
-        self.value += 1
-        return self.value
-    __next__ = next
+class Person(namedtuple('BasePerson',('first_name','last_name'))):
+    __slots__ = ()
 
-class Person(object):
-    def __init__(self, first_name, last_name):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.x_id = Incrementer()
-        self.y_id = Incrementer()
-        self.z_id = Incrementer()
-        self.name_id = Incrementer()
+    x_id = property(Enumerator('x_id'))
+    y_id = property(Enumerator('y_id'))
+    z_id = property(Enumerator('z_id'))
+    name_id = property(Enumerator('name_id'))
 
     @property
     def signature(self):
         return self.first_name + '_' + self.last_name
 
-    def __hash__(self):
-        return hash(tuple([self.first_name, self.last_name]))
-
-    def __eq__(self, other):
-        t_self = (self.first_name, self.last_name)
-        if t_self == other:
-            return True
-        elif t_self == (other.first_name, other.last_name):
-            return True
-        return NotImplemented
-
     @private_cache
     def full_name(self):
-        return self.first_name + '_' + self.last_name + '_' + next(self.name_id)
+        return '%s_%s_%s' % (self.first_name , self.last_name, self.name_id)
 
-    @memoize
+    @private_cache
     def x(self):
-        return "XXX_%d_%d" % (id(self), next(self.x_id))
+        return "XXX_%d_%d" % (id(self), self.x_id)
 
     @private_cache
     def y(self):
-        return "YYY_%d_%d" % (id(self), next(self.y_id))
+        return "YYY_%d_%d" % (id(self), self.y_id)
 
     @property
     def z(self):
-        return "ZZZ_%d_%d" % (id(self), next(self.z_id))
+        return "ZZZ_%d_%d" % (id(self), self.z_id)
+
+p = Person('Steve','Zelaznik')
+m = Person('Michael','Zelaznik')
 
 @bulk_test
 class test_cached_property(object):
@@ -72,7 +61,7 @@ class test_cached_property(object):
 
     @bulk_test.template
     def test_native_method_z_increments_up_each_time(self, item):
-        last_z = next(item.z_id)
+        last_z = item.z_id
         self.assertEqual(item.z, "ZZZ_%d_%d" % (id(item),last_z+1))
         item.z
         item.z

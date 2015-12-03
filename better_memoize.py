@@ -109,6 +109,19 @@ def private_cache(func):
             self[key] = val
             return val
     fget = Cache().__getitem__
+    return property(fget, doc=func.__doc__)
+
+def slower_cache(func):
     name = func.__name__
-    doc = "Cached lookup for %s" % (name,)
-    return property(fget, doc=doc)
+    from functools import wraps
+    private_template = '_%%s__%s' % (name,)
+
+    @property
+    @wraps(func)
+    def decorated(self):
+        private_name = private_template % self.__class__.__name__
+        if not hasattr(self, private_name):
+            value = func(self)
+            setattr(self, private_name, value)
+        return getattr(self, private_name)
+    return decorated
