@@ -108,7 +108,6 @@ def private_cache(func):
             val = func(key)
             self[key] = val
             return val
-
     fget = Cache().__getitem__
     name = func.__name__
     doc = "Cached lookup for %s" % (name,)
