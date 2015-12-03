@@ -1,5 +1,5 @@
 import unittest
-from better_memoize import memoize, private_cache, slower_cache
+from better_memoize import memoize, private_cache
 from bulk_tests import bulk_test
 
 from collections import namedtuple, OrderedDict
@@ -21,7 +21,6 @@ class Enumerator(object):
 
 class Person(namedtuple('BasePerson',('first_name','last_name'))):
     __slots__ = ()
-
     x_id = property(Enumerator('x_id'))
     y_id = property(Enumerator('y_id'))
     z_id = property(Enumerator('z_id'))
@@ -91,6 +90,12 @@ class Item(namedtuple('BaseItem',keys)):
     defaults = tuple(['%s=%r' % i for i in source.items()])
     extra_keys = tuple(['n','o','r','t','h'])
     extra_values = tuple(ord(k) for k in extra_keys)
+
+    def __repr__(self):
+        c = self.__class__.__name__
+        items = zip(self._fields, self)
+        r = ', '.join(['%s=%r' % i for i in items])
+        return '%s(%s)' % (c, r)
 
     @classmethod
     def base_args(cls, varargs = None, keywords = None, args_passed = ()):

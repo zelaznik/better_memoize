@@ -1,0 +1,252 @@
+I'll admit it.  I hate meta programming.  Don't get me wrong, I like to use it, but only after somebody else has slaved away create all that darkroom magic that makes my life so seamless.
+
+Even so, every once in a while I too get caught deep in the metaprogramming rabbit hole.  Usually after I've grown sick of typing the same boiler plate patterns over and over again.  Most of the time there's nothing to brag about.  Every once in a while I feel like I've at least struck silver.  So here goes.
+
+I'm presenting what may be the fastest way to memoize property decorators in Python.
+
+Necessity is the mother of invention, and I stumbled across this problem after writing and rewriting this same god-damn pattern.
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Person</span>:
+    <span style="color: #555555; font-weight: bold">@property</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">try</span>:
+            <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">self</span><span style="color: #333333">.</span>__full_name
+        <span style="color: #008800; font-weight: bold">except</span> <span style="color: #FF0000; font-weight: bold">AttributeError</span>:
+            val <span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">_</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">&#39;</span> <span style="color: #333333">%</span> (<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name)
+            <span style="color: #007020">self</span><span style="color: #333333">.</span>__full_name <span style="color: #333333">=</span> val
+            <span style="color: #008800; font-weight: bold">return</span> val
+</pre></div>
+
+<br>
+I know.  Pretty annoyting.  It would be nice to be able to repeat the pattern like this:
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Person</span>:
+    <span style="color: #555555; font-weight: bold">@cached_property</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39;</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">_</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">&#39;</span> <span style="color: #333333">%</span> (<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name)
+</pre></div>
+
+<br>
+I looked up some memoizing patterns, and this patten seems to be the standard way to do things.
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">cache_property_standard</span>(fget):
+    private_template <span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;_</span><span style="background-color: #eeeeee">%%</span><span style="background-color: #fff0f0">s__</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">&#39;</span> <span style="color: #333333">%</span> fget<span style="color: #333333">.</span>__name__
+    <span style="color: #008800; font-weight: bold">from</span> <span style="color: #0e84b5; font-weight: bold">functools</span> <span style="color: #008800; font-weight: bold">import</span> wraps
+    <span style="color: #555555; font-weight: bold">@wraps</span>(fget)
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">fget_memoized</span>(<span style="color: #007020">self</span>):
+        attr_name <span style="color: #333333">=</span> private_template <span style="color: #333333">%</span> <span style="color: #007020">self</span><span style="color: #333333">.</span>__class__<span style="color: #333333">.</span>__name__
+        <span style="color: #008800; font-weight: bold">if</span> <span style="color: #000000; font-weight: bold">not</span> <span style="color: #007020">hasattr</span>(<span style="color: #007020">self</span>, attr_name):
+            <span style="color: #007020">setattr</span>(<span style="color: #007020">self</span>, attr_name, fget(<span style="color: #007020">self</span>))
+        <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">getattr</span>(<span style="color: #007020">self</span>, attr_name)
+    <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">property</span>(fget_memoized)
+</pre></div>
+
+<br>
+    This seems to be the most common pattern, but it's really slow.  This is where I'm offering my alternative implementation.
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Person</span>(namedtuple(<span style="background-color: #fff0f0">&#39;BasePerson&#39;</span>, (<span style="background-color: #fff0f0">&#39;first_name&#39;</span>,<span style="background-color: #fff0f0">&#39;last_name&#39;</span>))):
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">__repr__</span>(<span style="color: #007020">self</span>):
+        c <span style="color: #333333">=</span> <span style="color: #007020">self</span><span style="color: #333333">.</span>__class__<span style="color: #333333">.</span>__name__
+        items <span style="color: #333333">=</span> [<span style="background-color: #fff0f0">&#39;</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">: </span><span style="background-color: #eeeeee">%r</span><span style="background-color: #fff0f0">&#39;</span> <span style="color: #333333">%</span> i <span style="color: #008800; font-weight: bold">for</span> i <span style="color: #000000; font-weight: bold">in</span> <span style="color: #007020">zip</span>(<span style="color: #007020">self</span><span style="color: #333333">.</span>_fields, <span style="color: #007020">self</span>)]
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39;</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">(</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">)&#39;</span> <span style="color: #333333">%</span> (c, <span style="background-color: #fff0f0">&#39;, &#39;</span><span style="color: #333333">.</span>join(items))
+
+<span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">SlowPerson</span>(Person):
+    <span style="color: #555555; font-weight: bold">@cache_property_standard</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39; &#39;</span><span style="color: #333333">.</span>join([<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name])
+
+s <span style="color: #333333">=</span> SlowPerson(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+
+In [<span style="color: #0000DD; font-weight: bold">94</span>]: s<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">94</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+
+In [<span style="color: #0000DD; font-weight: bold">95</span>]: timeit s<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">805</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">790</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">781</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">789</span> ns per loop
+</pre></div>
+
+<br>
+We can do a lot better than that.  This is the solution I've proposed for the same problem.  Notice the order of magnitude difference in speed.  It's also more efficient with memory as well.  It requires one new dictionary for each field that is memoized, as opposed to a new dictionary for each object that's instantiated.
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">lightning_speed_cache</span>(func):
+    <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Cache</span>(<span style="color: #007020">dict</span>):
+        __slots__ <span style="color: #333333">=</span> ()
+        <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">__missing__</span>(<span style="color: #007020">self</span>, key):
+            val <span style="color: #333333">=</span> func(key)
+            <span style="color: #007020">self</span>[key] <span style="color: #333333">=</span> val
+            <span style="color: #008800; font-weight: bold">return</span> val
+    fget <span style="color: #333333">=</span> Cache()<span style="color: #333333">.</span>__getitem__
+    <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">property</span>(fget, doc<span style="color: #333333">=</span>func<span style="color: #333333">.</span>__doc__)
+
+<span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Sprinter</span>(Person):
+    __slots__ <span style="color: #333333">=</span> ()
+    <span style="color: #555555; font-weight: bold">@lightning_speed_cache</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39; &#39;</span><span style="color: #333333">.</span>join([<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name])
+t <span style="color: #333333">=</span> Sprinter(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+
+t<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">131</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+
+timeit t<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">150</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">152</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">150</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">150</span> ns per loop
+</pre></div>
+
+<br>
+This solution is as good as we're going to get for anything that's wrapped with a "property" decorator.  These are the same benchmarks that Pytohn's namedtuple attributes acheive.  It doesn't
+The first thing we can do is start to use exceptions.  Python is a "Better to ask forgiveness than permission," language.  This contrasts with lower level languges which follow a "Look before you leap," approach.  Here's our first improvement.  Baby steps, baby steps...
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">cache_property_use_exceptions</span>(fget):
+    private_template <span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;_</span><span style="background-color: #eeeeee">%%</span><span style="background-color: #fff0f0">s__</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">&#39;</span> <span style="color: #333333">%</span> fget<span style="color: #333333">.</span>__name__
+    <span style="color: #008800; font-weight: bold">from</span> <span style="color: #0e84b5; font-weight: bold">functools</span> <span style="color: #008800; font-weight: bold">import</span> wraps
+    <span style="color: #555555; font-weight: bold">@wraps</span>(fget)
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">fget_memoized</span>(<span style="color: #007020">self</span>):
+        attr_name <span style="color: #333333">=</span> private_template <span style="color: #333333">%</span> <span style="color: #007020">self</span><span style="color: #333333">.</span>__class__<span style="color: #333333">.</span>__name__
+        <span style="color: #008800; font-weight: bold">try</span>:
+            <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">getattr</span>(<span style="color: #007020">self</span>, attr_name)
+        <span style="color: #008800; font-weight: bold">except</span> <span style="color: #FF0000; font-weight: bold">AttributeError</span>:
+            val <span style="color: #333333">=</span> fget(<span style="color: #007020">self</span>)
+            <span style="color: #007020">setattr</span>(<span style="color: #007020">self</span>, attr_name, val)
+            <span style="color: #008800; font-weight: bold">return</span> val
+    <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">property</span>(fget_memoized)
+
+<span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">MediumPerson</span>(Person):
+    <span style="color: #555555; font-weight: bold">@cache_property_use_exceptions</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39; &#39;</span><span style="color: #333333">.</span>join([<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name])
+
+m <span style="color: #333333">=</span> MediumPerson(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+m<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">116</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+timeit m<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">678</span> ns per loop
+</pre></div>
+
+<br>
+  The big bottleneck is when we're setting attributes by their private name.  For those of you who don't already know, Python stores "private" attributes in an obscure way.  They're not really private, they've just garbled up the naming convention.  Not that different from trying to watch HBO as a kid without a subscription.  You would still make out what's going on if you're willing to put in the effort.
+
+  So "full_name" is officially a private attribute.  That means the dictionary that stores the instance attributes for a person looks like this:
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%">m2 <span style="color: #333333">=</span> MediumPerson(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+m2<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">121</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+m2<span style="color: #333333">.</span>__dict__
+Out[<span style="color: #0000DD; font-weight: bold">122</span>]: {<span style="background-color: #fff0f0">&#39;_MediumPerson__full_name&#39;</span>: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>}
+</pre></div>
+
+<br>
+  Getting rid of this will shave a lot of time off.  Let's take a look.  Just to show that my computer didn't suddenly speed up as I have been writing this post, I went back and benchmarked an earlier class instance:
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">cache_property_semipublic_names</span>(fget):
+    attr_name <span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;_</span><span style="background-color: #eeeeee">%s</span><span style="background-color: #fff0f0">&#39;</span> <span style="color: #333333">%</span> fget<span style="color: #333333">.</span>__name__
+    <span style="color: #008800; font-weight: bold">from</span> <span style="color: #0e84b5; font-weight: bold">functools</span> <span style="color: #008800; font-weight: bold">import</span> wraps
+    <span style="color: #555555; font-weight: bold">@wraps</span>(fget)
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">fget_memoized</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">try</span>:
+            <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">getattr</span>(<span style="color: #007020">self</span>, attr_name)
+        <span style="color: #008800; font-weight: bold">except</span> <span style="color: #FF0000; font-weight: bold">AttributeError</span>:
+            val <span style="color: #333333">=</span> fget(<span style="color: #007020">self</span>)
+            <span style="color: #007020">setattr</span>(<span style="color: #007020">self</span>, attr_name, val)
+            <span style="color: #008800; font-weight: bold">return</span> val
+    <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">property</span>(fget_memoized)
+
+
+<span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">SemiPublicAttributes</span>(Person):
+    <span style="color: #555555; font-weight: bold">@cache_property_semipublic_names</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39; &#39;</span><span style="color: #333333">.</span>join([<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name])
+
+i <span style="color: #333333">=</span> SemiPublicAttributes(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+i<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">127</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+
+timeit i<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">321</span> ns per loop
+<span style="color: #888888"># Whoa!  Did my computer speed up suddenly?</span>
+<span style="color: #888888"># Let&#39;s run the old class instance just to be sure...</span>
+timeit m<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">695</span> ns per loop
+</pre></div>
+
+<br>
+We're almost there, but we can STILL shave off more than half the runtime we're currently occupying.  We've got two more steps to go.  First, let's get rid of the attribute getting.
+It's far more efficient simply to store the caches inside a closure.  This is also more memory efficient.  We need one dictionary per field memoized, as opposed one dictionary per item.
+Hash tables waste space, so a field based storage system makes more sense in this case.  In addition, it allows us to add attributes to classes where __slots__ = ().  The namedtuple in particular comes to mind.
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">caches_stored_per_field_not_instance</span>(func):
+    <span style="color: #008800; font-weight: bold">from</span> <span style="color: #0e84b5; font-weight: bold">functools</span> <span style="color: #008800; font-weight: bold">import</span> wraps
+    cache <span style="color: #333333">=</span> {}
+    <span style="color: #555555; font-weight: bold">@property</span>
+    <span style="color: #555555; font-weight: bold">@wraps</span>(func)
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">decorated</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">try</span>:
+            <span style="color: #008800; font-weight: bold">return</span> cache[<span style="color: #007020">self</span>]
+        <span style="color: #008800; font-weight: bold">except</span> <span style="color: #FF0000; font-weight: bold">KeyError</span>:
+            value <span style="color: #333333">=</span> func(<span style="color: #007020">self</span>)
+            cache[<span style="color: #007020">self</span>] <span style="color: #333333">=</span> value
+            <span style="color: #008800; font-weight: bold">return</span> value
+    <span style="color: #008800; font-weight: bold">return</span> decorated
+
+<span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Jogger</span>(Person):
+    <span style="color: #555555; font-weight: bold">@caches_stored_per_field_not_instance</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39; &#39;</span><span style="color: #333333">.</span>join([<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name])
+
+j <span style="color: #333333">=</span> Jogger(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+
+j<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">152</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+
+timeit j<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">263</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">266</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">262</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">1000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">266</span> ns per loop
+</pre></div>
+
+<br>
+  One step left before we're done.  This is probably the most "Python magic" of any of the steps so far.  Function calls in Python are expensive.  So whenever we are writing programming, it's nice to be able to delegate those calls to builtin methods, which are written in C.
+  What we're doing here is making a special subclass of a dictionary.  When the item is missing, that's when we go ahead and make the original function call.  Again, Python is "ask forgiveness and not permission."  Then we instiantiate this dictionary sublcass.  This subclass
+  is a singleton.  The clever thing that we do is we return the __getitem__ method of the singleton.  A property getter object only expects one argument "self", and the __getitem__ method only expects one key, so this works out perfectly.
+<br><br>
+
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">lightning_speed_cache</span>(func):
+    <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Cache</span>(<span style="color: #007020">dict</span>):
+        __slots__ <span style="color: #333333">=</span> ()
+        <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">__missing__</span>(<span style="color: #007020">self</span>, key):
+            val <span style="color: #333333">=</span> func(key)
+            <span style="color: #007020">self</span>[key] <span style="color: #333333">=</span> val
+            <span style="color: #008800; font-weight: bold">return</span> val
+    fget <span style="color: #333333">=</span> Cache()<span style="color: #333333">.</span>__getitem__
+    <span style="color: #008800; font-weight: bold">return</span> <span style="color: #007020">property</span>(fget, doc<span style="color: #333333">=</span>func<span style="color: #333333">.</span>__doc__)
+
+<span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Sprinter</span>(Person):
+    __slots__ <span style="color: #333333">=</span> ()
+    <span style="color: #555555; font-weight: bold">@lightning_speed_cache</span>
+    <span style="color: #008800; font-weight: bold">def</span> <span style="color: #0066BB; font-weight: bold">full_name</span>(<span style="color: #007020">self</span>):
+        <span style="color: #008800; font-weight: bold">return</span> <span style="background-color: #fff0f0">&#39; &#39;</span><span style="color: #333333">.</span>join([<span style="color: #007020">self</span><span style="color: #333333">.</span>first_name, <span style="color: #007020">self</span><span style="color: #333333">.</span>last_name])
+t <span style="color: #333333">=</span> Sprinter(<span style="background-color: #fff0f0">&#39;Steve&#39;</span>,<span style="background-color: #fff0f0">&#39;Zelaznik&#39;</span>)
+
+t<span style="color: #333333">.</span>full_name
+Out[<span style="color: #0000DD; font-weight: bold">131</span>]: <span style="background-color: #fff0f0">&#39;Steve Zelaznik&#39;</span>
+
+timeit t<span style="color: #333333">.</span>full_name
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">150</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">152</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">150</span> ns per loop
+<span style="color: #0000DD; font-weight: bold">10000000</span> loops, best of <span style="color: #0000DD; font-weight: bold">3</span>: <span style="color: #0000DD; font-weight: bold">150</span> ns per loop
+</pre></div>
