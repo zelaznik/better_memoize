@@ -1,5 +1,7 @@
+from __future__ import division, print_function, absolute_import
+
 import unittest
-from better_memoize import memoize, private_cache
+from main import memoize, private_cache
 from bulk_tests import bulk_test
 
 from collections import namedtuple, OrderedDict

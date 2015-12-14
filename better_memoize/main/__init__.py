@@ -7,7 +7,7 @@
     allows the memoized decorator to take the same argument format
     as the original function.
 """
-__all__ = ['memoize']
+__all__ = ['memoize', 'arg_formatter','private_cache']
 
 def memoize(func):
     template  = '''if True:
@@ -96,4 +96,3 @@ def private_cache(func):
             return val
     fget = Cache().__getitem__
     return property(fget, doc=func.__doc__)
-
