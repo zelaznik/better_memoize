@@ -201,7 +201,7 @@ timeit j.full_name
 1000000 loops, best of 3: 266 ns per loop
 ```
 
-One step left before we’re done. This is probably the most “Python magic” of any of the steps so far. Function calls in Python are expensive. So whenever we are writing programming, it’s nice to be able to delegate those calls to builtin methods, which are written in C. What we’re doing here is making a special subclass of a dictionary. When the item is missing, that’s when we go ahead and make the original function call. Again, Python is “ask forgiveness and not permission.” Then we instantiate this dictionary subclass. This subclass is a singleton. The clever thing that we do is we return the **\_\_getitem\_\_** method of the singleton. A property getter object only expects one argument “self”, and the **\_\_getitem\_\_** method only expects one key, so this works out perfectly.
+One step left before we’re done. This is probably the most “Python magic” of any of the steps so far. **Function calls in Python are expensive. So whenever we are writing programming, it’s nice to be able to delegate those calls to builtin methods, which are written in C.** What we’re doing here is making a special subclass of a dictionary. When the item is missing, that’s when we go ahead and make the original function call. Again, Python is “ask forgiveness and not permission.” Then we instantiate this dictionary subclass. This subclass is a singleton. The clever thing that we do is we return the **\_\_getitem\_\_** method of the singleton. A property getter object only expects one argument “self”, and the **\_\_getitem\_\_** method only expects one key, so this works out perfectly.
 
 ```python
 def lightning_speed_cache(func):
