@@ -23,11 +23,14 @@ from better_memoize import memoize
 @memoize
 def magnitude(x, y, z):
     return (x**2 + y**2 + z**2) ** 0.5
-
-  [in] >>> import inspect
-  [in] >>> inspect.getargspec(magnitude)
- [out] >>> ArgSpec(args=['x', 'y', 'z'], varargs=None, keywords=None, defaults=None)
 ```
+
+```python
+ [in] >>> import inspect
+ [in] >>> inspect.getargspec(magnitude)
+[out] >>> ArgSpec(args=['x', 'y', 'z'], varargs=None, keywords=None, defaults=None)
+```
+
 ## How to use "better_memoize.private_cache" in code:
 
 ```python
@@ -45,10 +48,12 @@ class Person(tuple):
     @private_cache
     def full_name(self):
         return '%s_%s' % (self.first_name, self.last_name)
+```
 
-  [in] >>> p = Person('Steve','Zelaznik')
-  [in] >>> p.full_name
- [out] >>> 'Steve_Zelaznik'
+```python
+ [in] >>> p = Person('Steve','Zelaznik')
+ [in] >>> p.full_name
+[out] >>> 'Steve_Zelaznik'
 ```
 
 ## Installation Guide:
