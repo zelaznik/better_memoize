@@ -1,10 +1,21 @@
 # Better Memoize Library
 
-- A set of functions which improve the performance of Python's memoize pattern.
-- Gets rid of unnecessary nested function calls.
-- Eliminates unnecessary variable packing and unpacking.
+## Overview
+  - A set of functions which improve the performance of Python's memoize pattern.
+  - Gets rid of unnecessary nested function calls.
+  - Eliminates unnecessary variable packing and unpacking.
 
-# Private Cache
+## Functions Included:
+  - **better_memoize**
+    - Uses custom executed code which preserve original function arguments.
+    - Eliminates costly argument unpacking and repacking.
+
+  - **private_cache**
+    - For custom on-the-fly calculated properties.
+    - Performance as good as Python's namedtuple.
+    - Memory efficient.  One cache dictionary per attribute, not class instance.
+
+## Private Cache - Design Choices Explained
 
 I’ll admit it. I hate meta programming. Don’t get me wrong, I like to use it, but only after somebody else has slaved away create all that darkroom magic that makes my life so seamless. Even so, every once in a while I too get caught deep in the metaprogramming rabbit hole. Usually after I’ve grown sick of typing the same boiler plate patterns over and over again. Most of the time there’s nothing to brag about. Every once in a while I feel like I’ve at least struck silver. So here goes. I’m presenting what may be the fastest way to memoize property decorators in Python. Necessity is the mother of invention, and I stumbled across this problem after writing and rewriting this same pattern.
 
