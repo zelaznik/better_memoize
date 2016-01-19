@@ -15,29 +15,6 @@
     - Performance as good as Python's namedtuple.
     - Memory efficient.  One cache dictionary per attribute, not class instance.
 
-## How to use "better_memoize.private_cache" in code:
-```python
-from better_memoize import private_cache
-
-from operator import itemgetter
-class Person(tuple):
-    __slots__ = ()
-    first_name = property(itemgetter(0))
-    last_name  = property(itemgetter(1))
-
-    def __new__(cls, first_name, last_name):
-        return tuple.__new__(cls, (first_name, last_name))
-
-    ''' Combines the property and memoize decorators. '''
-    @private_cache
-    def full_name(self):
-        return '%s_%s' % (self.first_name, self.last_name)
-
-  [in] >>> p = Person('Steve','Zelaznik')
-  [in] >>> p.full_name
- [out] >>> 'Steve Zelaznik'
-```
-
 ## How to use "better_memoize.memoize" in code:
 
 ```python
