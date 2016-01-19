@@ -15,6 +15,77 @@
     - Performance as good as Python's namedtuple.
     - Memory efficient.  One cache dictionary per attribute, not class instance.
 
+## How to use "better_memoize.private_cache" in code:
+```python
+from better_memoize import private_cache
+
+from operator import itemgetter
+class Person(tuple):
+    __slots__ = ()
+    first_name = property(itemgetter(0))
+    last_name  = property(itemgetter(1))
+
+    def __new__(cls, first_name, last_name):
+        return tuple.__new__(cls, (first_name, last_name))
+
+    ''' Combines the property and memoize decorators. '''
+    @private_cache
+    def full_name(self):
+        return '%s_%s' % (self.first_name, self.last_name)
+
+  [in] >>> p = Person('Steve','Zelaznik')
+  [in] >>> p.full_name
+ [out] >>> 'Steve Zelaznik'
+```
+
+## How to use "better_memoize.memoize" in code:
+
+```python
+from better_memoize import memoize
+
+@memoize
+def magnitude(x, y, z):
+    return (x**2 + y**2 + z**2) ** 0.5
+
+  [in] >>> import inspect
+  [in] >>> inspect.getargspec(magnitude)
+ [out] >>> ArgSpec(args=['x', 'y', 'z'], varargs=None, keywords=None, defaults=None)
+```
+## How to use "better_memoize.private_cache" in code:
+
+```python
+from better_memoize import private_cache
+from operator import itemgetter
+class Person(tuple):
+    __slots__ = ()
+    first_name = property(itemgetter(0))
+    last_name  = property(itemgetter(1))
+
+    def __new__(cls, first_name, last_name):
+        return tuple.__new__(cls, (first_name, last_name))
+
+    ''' Combines the property and memoize decorators. '''
+    @private_cache
+    def full_name(self):
+        return '%s_%s' % (self.first_name, self.last_name)
+
+  [in] >>> p = Person('Steve','Zelaznik')
+  [in] >>> p.full_name
+ [out] >>> 'Steve_Zelaznik'
+```
+
+## Installation Guide:
+  - Browse to the directory you want in the terminal
+  - Clone the Git Repo in your computer
+  - Make sure to have the colorize gem
+
+  ```bash
+  $ cd '/users/zMac/desktop'
+  $ git clone https://github.com/zelaznik/better_memoize.git
+  $ cd 'better_memoize'
+  $ python setup.py install
+  ```
+
 ## Private Cache - Design Choices Explained
 
 I’ll admit it. I hate meta programming. Don’t get me wrong, I like to use it, but only after somebody else has slaved away create all that darkroom magic that makes my life so seamless. Even so, every once in a while I too get caught deep in the metaprogramming rabbit hole. Usually after I’ve grown sick of typing the same boiler plate patterns over and over again. Most of the time there’s nothing to brag about. Every once in a while I feel like I’ve at least struck silver. So here goes. I’m presenting what may be the fastest way to memoize property decorators in Python. Necessity is the mother of invention, and I stumbled across this problem after writing and rewriting this same pattern.
